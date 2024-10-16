@@ -1,8 +1,9 @@
-'use client'
-
 import { useState, useEffect, memo } from 'react'
+import { useNavigate } from "react-router-dom";
+
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronRight, ChevronLeft, Car, Calendar, User, MapPin, Clock } from 'lucide-react'
+import axios from 'axios'
 
 const titles = ["Join the Ride", "Personal Details", "Stay Connected", "Ready to Roll!"]
 const features = [
@@ -43,7 +44,7 @@ const CustomSelect = memo(({ name, options, value, onChange, placeholder }) => (
   </div>
 ))
 
-const SignupForm = memo(({ step, formData, handleInputChange, nextStep, prevStep }) => (
+const SignupForm = memo(({ step, formData, handleInputChange, nextStep, prevStep, signUpSubmit }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -152,21 +153,26 @@ const SignupForm = memo(({ step, formData, handleInputChange, nextStep, prevStep
       </div>
     )}
     <div className="flex justify-between">
-      {step > 0 && (
+      {step > 0 && step < 2 (
         <button onClick={prevStep} className="px-6 py-3 bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition-colors duration-300">
           <ChevronLeft className="inline mr-1" /> Back
         </button>
       )}
-      {step < 3 && (
+      {step < 2 && (
         <button onClick={nextStep} className="px-6 py-3 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors duration-300 ml-auto">
           Next <ChevronRight className="inline ml-1" />
+        </button>
+      )}
+      {step == 2 && (
+        <button onClick={signUpSubmit} className="px-6 py-3 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors duration-300 ml-auto">
+          Submit <ChevronRight className="inline ml-1" />
         </button>
       )}
     </div>
   </motion.div>
 ))
 
-const LoginForm = memo(() => (
+const LoginForm = memo(({loginSubmit, handleInputChange}) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -178,18 +184,22 @@ const LoginForm = memo(() => (
     <div className="relative">
       <input
         type="email"
+        name="email"
         placeholder="Email"
+        onChange={handleInputChange}
         className="w-full p-3 border-2 border-green-300 rounded-full focus:outline-none focus:border-green-500"
       />
     </div>
     <div className="relative">
       <input
         type="password"
+        name="password"
         placeholder="Password"
+        onChange={handleInputChange}
         className="w-full p-3 border-2 border-green-300 rounded-full focus:outline-none focus:border-green-500"
       />
     </div>
-    <button className="w-full px-6 py-3 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors duration-300">
+    <button onClick={loginSubmit}  className="w-full px-6 py-3 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors duration-300">
       Log In
     </button>
   </motion.div>
@@ -216,7 +226,9 @@ const FeatureSlides = memo(({ currentFeature }) => (
   </div>
 ))
 
-export default function Component() {
+export default function Component({URL}) {
+  const history = useNavigate();
+
   const [isLogin, setIsLogin] = useState(true)
   const [step, setStep] = useState(0)
   const [currentFeature, setCurrentFeature] = useState(0)
@@ -247,7 +259,36 @@ export default function Component() {
 
   const nextStep = () => setStep(prev => Math.min(prev + 1, 3))
   const prevStep = () => setStep(prev => Math.max(prev - 1, 0))
+  const signUpSubmit = async() => {
+    try {
+      const response = await axios.post(`${URL}/auth/signup`,formData);
+      if(response.status == 201){
+        nextStep();
+      }
+    } catch (error) {
+      if(error.status == 400){
+        alert("User email already exists");
+      }
+    }
+  }
 
+  const loginSubmit = async() => {
+    try {
+      const response = await axios.post(`${URL}/auth/login`,formData);
+      if(response.status == 200){
+        document.cookie = "token=" + response.data.token;
+        setTimeout(() => {
+                  
+          history("/dashboard");
+          window.location.reload();
+        }, 600);
+      }
+    } catch (error) {
+      if(error.status == 400){
+        alert("User details unmatched");
+      }
+    }
+  }
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-2xl max-w-6xl w-full overflow-hidden">
@@ -260,7 +301,7 @@ export default function Component() {
             <h1 className="text-4xl font-bold text-center text-green-800 mb-8">CarPool Connect</h1>
             <AnimatePresence mode="wait">
               {isLogin ? 
-                <LoginForm key="login" /> : 
+                <LoginForm key="login" loginSubmit={loginSubmit} handleInputChange={handleInputChange} /> : 
                 <SignupForm 
                   key="signup" 
                   step={step} 
@@ -268,6 +309,7 @@ export default function Component() {
                   handleInputChange={handleInputChange}
                   nextStep={nextStep}
                   prevStep={prevStep}
+                  signUpSubmit={signUpSubmit}
                 />
               }
             </AnimatePresence>
