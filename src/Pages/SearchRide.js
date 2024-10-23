@@ -12,41 +12,83 @@ import {
   PawPrintIcon,
 } from "lucide-react";
 import Navbar from "../Components/Navbar";
-import axios from 'axios';
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
-const initialRides = [
-  // Sample initial ride data, which can be replaced with actual data
-  {
-    id: 1,
-    driver: "John Doe",
-    departure: "New York",
-    destination: "Boston",
-    time: "2023-10-10 08:00",
-    price: 25,
-    seatsAvailable: 2,
-    verified: true,
-    instantApproval: false,
-    smokingAllowed: false,
-    petAllowed: true,
-  },
-  {
-    id: 2,
-    driver: "Jane Smith",
-    departure: "San Francisco",
-    destination: "Los Angeles",
-    time: "2023-10-10 10:00",
-    price: 50,
-    seatsAvailable: 3,
-    verified: false,
-    instantApproval: true,
-    smokingAllowed: true,
-    petAllowed: false,
-  },
-  // More rides...
-];
+// const initialRides = [
+//   {
+//     id: 1,
+//     from: "New York",
+//     to: "Boston",
+//     departureTime: "2:00 PM",
+//     arrivalTime: "6:00 PM",
+//     date: "2023-06-25",
+//     driver: "John Doe",
+//     rating: 4.5,
+//     distance: 215,
+//     price: 45,
+//     instantBooking: true,
+//     verified: true,
+//     maxInBack: 3,
+//     smokingAllowed: false,
+//     petAllowed: true,
+//   },
+//   {
+//     id: 2,
+//     from: "Los Angeles",
+//     to: "San Francisco",
+//     departureTime: "9:00 AM",
+//     arrivalTime: "2:30 PM",
+//     date: "2023-06-26",
+//     driver: "Jane Smith",
+//     rating: 4.8,
+//     distance: 383,
+//     price: 65,
+//     instantBooking: false,
+//     verified: false,
+//     maxInBack: 2,
+//     smokingAllowed: true,
+//     petAllowed: false,
+//   },
+//   {
+//     id: 3,
+//     from: "Chicago",
+//     to: "Detroit",
+//     departureTime: "11:30 AM",
+//     arrivalTime: "2:45 PM",
+//     date: "2023-06-27",
+//     driver: "Mike Johnson",
+//     rating: 4.2,
+//     distance: 283,
+//     price: 55,
+//     instantBooking: true,
+//     verified: true,
+//     maxInBack: 3,
+//     smokingAllowed: false,
+//     petAllowed: false,
+//   },
+//   {
+//     id: 4,
+//     from: "Houston",
+//     to: "Austin",
+//     departureTime: "1:15 PM",
+//     arrivalTime: "4:00 PM",
+//     date: "2023-06-28",
+//     driver: "Emily Brown",
+//     rating: 4.6,
+//     distance: 165,
+//     price: 35,
+//     instantBooking: false,
+//     verified: false,
+//     maxInBack: 2,
+//     smokingAllowed: true,
+//     petAllowed: true,
+//   },
+// ];
 
-export default function SearchRide() {
-  const [searchResults, setSearchResults] = useState(initialRides);
+export default function SearchRide({URL}) {
+  const history = useNavigate();
+  const [searchResults, setSearchResults] = useState([]);
   const [sortOptions, setSortOptions] = useState({
     earliestDeparture: false,
     lowestPrice: false,
@@ -66,66 +108,36 @@ export default function SearchRide() {
     smokingAllowed: false,
     petAllowed: false,
   });
-
-  // New state for location suggestions and coordinates
   const [fromInput, setFromInput] = useState("");
   const [toInput, setToInput] = useState("");
   const [fromSuggestions, setFromSuggestions] = useState([]);
   const [toSuggestions, setToSuggestions] = useState([]);
   const [fromCoordinates, setFromCoordinates] = useState(null);
   const [toCoordinates, setToCoordinates] = useState(null);
+  const [passengers, setPassengers] = useState(null);
+  const [dateTime, setDateTime] = useState(null);
 
   useEffect(() => {
     applyFiltersAndSort();
   }, [sortOptions, departureTimeFilters, additionalFilters]);
 
-  const handleSearch = (e) => {
+  const handleSearch = async(e) => {
     e.preventDefault();
-    // Perform a search using the coordinates if available
-    console.log("Search performed with coordinates:", fromCoordinates, toCoordinates);
-  };
-
-  const applyFiltersAndSort = () => {
-    let filteredResults = [...initialRides];
-
-    // Filter by departure time
-    filteredResults = filteredResults.filter((ride) => {
-      const rideTime = new Date(ride.time).getHours();
-      if (departureTimeFilters.before6 && rideTime < 6) return true;
-      if (departureTimeFilters["6to12"] && rideTime >= 6 && rideTime < 12) return true;
-      if (departureTimeFilters["12to18"] && rideTime >= 12 && rideTime < 18) return true;
-      if (departureTimeFilters.after18 && rideTime >= 18) return true;
-      return false;
-    });
-
-    // Additional filters
-    filteredResults = filteredResults.filter((ride) => {
-      if (additionalFilters.verifiedOnly && !ride.verified) return false;
-      if (additionalFilters.instantApproval && !ride.instantApproval) return false;
-      if (additionalFilters.smokingAllowed && !ride.smokingAllowed) return false;
-      if (additionalFilters.petAllowed && !ride.petAllowed) return false;
-      return true;
-    });
-
-    // Sort options
-    if (sortOptions.earliestDeparture) {
-      filteredResults.sort((a, b) => new Date(a.time) - new Date(b.time));
+    try {
+      const response = await axios.post(`${URL}/rides/search`,{fromCoordinates, toCoordinates, dateTime, passengers});
+      setSearchResults(response.data.rides)
+    } catch (error) {
+      
+      console.log(error);
     }
-    if (sortOptions.lowestPrice) {
-      filteredResults.sort((a, b) => a.price - b.price);
-    }
-
-    // Apply other sorts like 'closeToDeparturePoint', 'closeToArrivalPoint', etc., if needed
-    setSearchResults(filteredResults);
   };
-
-  // Function to fetch location suggestions
+  
   const fetchLocationSuggestions = async (input, setSuggestions) => {
     if (input.length < 3) return; // Minimum characters before suggesting
     try {
-      const response = await axios.get(`${URL}/rides/suggestions/${input}`);
-      const { locations } = response.data;
-      setSuggestions(locations);
+      const response = await axios.get(`${URL}/places/suggestions/${input}`);
+      const { suggestions } = response.data;
+      setSuggestions(suggestions);
     } catch (error) {
       console.error("Error fetching location suggestions:", error);
     }
@@ -146,13 +158,83 @@ export default function SearchRide() {
   // Function to handle suggestion selection
   const selectSuggestion = (location, setInput, setCoordinates, setSuggestions) => {
     setInput(location.description);
-    setCoordinates(location.coordinates);
+    setCoordinates(location.geometry.location);
     setSuggestions([]); // Hide suggestions after selection
+  };
+
+  const applyFiltersAndSort = () => {
+    let filteredResults = searchResults;
+
+    // Apply departure time filters
+    if (Object.values(departureTimeFilters).some(Boolean)) {
+      filteredResults = filteredResults.filter((ride) => {
+        const hour = parseInt(ride.departureTime.split(":")[0]);
+        const isPM = ride.departureTime.includes("PM");
+        const hour24 = isPM && hour !== 12 ? hour + 12 : hour;
+        if (departureTimeFilters.before6 && hour24 < 6) return true;
+        if (departureTimeFilters["6to12"] && hour24 >= 6 && hour24 < 12)
+          return true;
+        if (departureTimeFilters["12to18"] && hour24 >= 12 && hour24 < 18)
+          return true;
+        if (departureTimeFilters.after18 && hour24 >= 18) return true;
+        return false;
+      });
+    }
+
+    // Apply additional filters
+    if (additionalFilters.verifiedOnly) {
+      filteredResults = filteredResults.filter((ride) => ride.verified);
+    }
+    if (additionalFilters.instantApproval) {
+      filteredResults = filteredResults.filter((ride) => ride.instantBooking);
+    }
+    if (additionalFilters.smokingAllowed) {
+      filteredResults = filteredResults.filter((ride) => ride.smokingAllowed);
+    }
+    if (additionalFilters.petAllowed) {
+      filteredResults = filteredResults.filter((ride) => ride.petAllowed);
+    }
+
+    // Apply sort options
+    if (sortOptions.earliestDeparture) {
+      filteredResults.sort(
+        (a, b) =>
+          new Date(a.date + " " + a.departureTime).getTime() -
+          new Date(b.date + " " + b.departureTime).getTime()
+      );
+    }
+    if (sortOptions.lowestPrice) {
+      filteredResults.sort((a, b) => a.price - b.price);
+    }
+    // Note: For demo purposes, we're not implementing actual logic for proximity-based sorting
+    if (sortOptions.closeToDeparturePoint) {
+      console.log("Sorting by proximity to departure point");
+    }
+    if (sortOptions.closeToArrivalPoint) {
+      console.log("Sorting by proximity to arrival point");
+    }
+    if (sortOptions.shortestRide) {
+      filteredResults.sort((a, b) => a.distance - b.distance);
+    }
+
+    setSearchResults(filteredResults);
+  };
+
+  const toggleSortOption = (option) => {
+    setSortOptions((prev) => ({ ...prev, [option]: !prev[option] }));
+  };
+
+  const toggleDepartureTimeFilter = (filter) => {
+    setDepartureTimeFilters((prev) => ({ ...prev, [filter]: !prev[filter] }));
+  };
+
+  const toggleAdditionalFilter = (filter) => {
+    setAdditionalFilters((prev) => ({ ...prev, [filter]: !prev[filter] }));
   };
 
   return (
     <div className="min-h-screen bg-green-50 font-sans">
-      <Navbar />
+      <Navbar/>
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
@@ -162,7 +244,7 @@ export default function SearchRide() {
               Create Ride
             </button>
           </div>
-          <form onSubmit={handleSearch} className="bg-white shadow-md rounded-lg p-6 mb-6">
+          <form className="bg-white shadow-md rounded-lg p-6 mb-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="relative">
                 <label htmlFor="from" className="block text-sm font-medium text-gray-700 mb-1">
@@ -229,6 +311,7 @@ export default function SearchRide() {
                   When
                 </label>
                 <input
+                  onChange={(e)=>{setDateTime(e.target.value)}}
                   id="when"
                   name="when"
                   type="datetime-local"
@@ -240,6 +323,7 @@ export default function SearchRide() {
                   Passengers
                 </label>
                 <input
+                  onChange={(e)=>{setPassengers(e.target.value)}}
                   id="passengers"
                   name="passengers"
                   type="number"
@@ -252,6 +336,7 @@ export default function SearchRide() {
 
             <div className="flex justify-end mt-4">
               <button
+              onClick={handleSearch}
                 type="submit"
                 className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
@@ -260,46 +345,174 @@ export default function SearchRide() {
             </div>
           </form>
 
-          {/* Search results section */}
-          <div>
-            {searchResults.length > 0 ? (
-              <ul className="divide-y divide-gray-200">
+          <div className="flex flex-col md:flex-row gap-6">
+            <div className="w-full md:w-1/4">
+              <div className="bg-white shadow-md rounded-lg p-6">
+                <h2 className="text-lg font-semibold mb-4 text-green-700">
+                  Sort by
+                </h2>
+                <div className="space-y-2">
+                  {Object.entries(sortOptions).map(([key, value]) => (
+                    <label
+                      key={key}
+                      className="flex items-center space-x-2 text-gray-700 hover:text-green-600"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={value}
+                        onChange={() => toggleSortOption(key)}
+                        className="rounded border-gray-300 text-green-600 shadow-sm focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50"
+                      />
+                      <span>{key.split(/(?=[A-Z])/).join(" ")}</span>
+                    </label>
+                  ))}
+                </div>
+
+                <h2 className="text-lg font-semibold mt-6 mb-4 text-green-700">
+                  Departure time
+                </h2>
+                <div className="space-y-2">
+                  {Object.entries(departureTimeFilters).map(([key, value]) => (
+                    <label
+                      key={key}
+                      className="flex items-center space-x-2 text-gray-700 hover:text-green-600"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={value}
+                        onChange={() => toggleDepartureTimeFilter(key)}
+                        className="rounded border-gray-300 text-green-600 shadow-sm focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50"
+                      />
+                      <span>
+                        {key === "before6"
+                          ? "Before 06:00 AM"
+                          : key === "6to12"
+                          ? "06:00 AM - 12:00 PM"
+                          : key === "12to18"
+                          ? "12:01 PM - 06:00 PM"
+                          : "After 06:00 PM"}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+
+                <h2 className="text-lg font-semibold mt-6 mb-4 text-green-700">
+                  Additional Filters
+                </h2>
+                <div className="space-y-2">
+                  {Object.entries(additionalFilters).map(([key, value]) => (
+                    <label
+                      key={key}
+                      className="flex items-center space-x-2 text-gray-700 hover:text-green-600"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={value}
+                        onChange={() => toggleAdditionalFilter(key)}
+                        className="rounded border-gray-300 text-green-600 shadow-sm focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50"
+                      />
+                      <span>{key.split(/(?=[A-Z])/).join(" ")}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="w-full md:w-3/4">
+              <div className="bg-white shadow-md rounded-lg p-6">
+                <h2 className="text-xl font-semibold mb-4 text-green-700">
+                  Available Rides
+                </h2>
+                <ul className="space-y-4">
                 {searchResults.map((ride) => (
-                  <li key={ride.id} className="py-4 flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold">{ride.driver}</h3>
-                      <p className="text-sm text-gray-500">
-                        {ride.departure} to {ride.destination}
-                      </p>
-                      <p className="text-sm text-gray-500">{ride.time}</p>
-                      <p className="text-sm text-gray-500">
-                        Seats available: {ride.seatsAvailable} • Price: ${ride.price}
-                      </p>
-                    </div>
-                    <div className="flex space-x-4">
-                      <CheckCircleIcon
-                        className={`w-6 h-6 ${ride.verified ? "text-green-600" : "text-gray-400"}`}
-                        title={ride.verified ? "Verified driver" : "Unverified driver"}
-                      />
-                      <UsersIcon
-                        className={`w-6 h-6 ${ride.instantApproval ? "text-green-600" : "text-gray-400"}`}
-                        title={ride.instantApproval ? "Instant approval" : "Requires approval"}
-                      />
-                      <CigaretteIcon
-                        className={`w-6 h-6 ${ride.smokingAllowed ? "text-green-600" : "text-gray-400"}`}
-                        title={ride.smokingAllowed ? "Smoking allowed" : "No smoking"}
-                      />
-                      <PawPrintIcon
-                        className={`w-6 h-6 ${ride.petAllowed ? "text-green-600" : "text-gray-400"}`}
-                        title={ride.petAllowed ? "Pets allowed" : "No pets"}
-                      />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-gray-500">No rides found. Please adjust your search filters.</p>
+  <li
+    key={ride._id}
+    className="border border-gray-200 rounded-lg p-4 hover:bg-green-50 transition-colors duration-200"
+  >
+    <div className="flex items-center justify-between">
+      <div className="flex items-center space-x-4">
+        <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+          <span className="text-sm font-medium text-gray-500">
+            {ride.createdBy.name[0]} {/* Assuming createdBy could be the driver's name */}
+          </span>
+        </div>
+        <div>
+          <div className="flex items-center">
+            <p className="font-semibold text-gray-800">
+              {ride.createdBy.name} {/* Assuming createdBy is the driver's name */}
+            </p>
+            {ride.createdBy.isPhoneVerified && (
+              <span className="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                <CheckCircleIcon className="h-3 w-3 mr-1" />
+                Verified
+              </span>
             )}
+          </div>
+          <div className="flex items-center">
+            <StarIcon className="h-4 w-4 text-yellow-400" />
+            <span className="ml-1 text-sm text-gray-600">
+              {/* Assuming ride rating should be implemented */}
+              {/* You can adjust this based on your schema */}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div className="text-right">
+        <p className="text-lg font-bold text-green-600">
+          ${ride.basePrice}
+        </p>
+        <p className="text-sm text-gray-500">
+          {/* You can calculate or display distance here if applicable */}
+        </p>
+      </div>
+    </div>
+    <div className="mt-2 flex items-center justify-between">
+      <div>
+        <div className="flex items-center text-sm text-gray-500">
+          <ClockIcon className="h-4 w-4 mr-1" />
+          <span>
+            {new Date(ride.when).toLocaleString()} {/* Format the date */}
+          </span>
+        </div>
+        <div className="flex items-center text-sm text-gray-500 mt-1">
+          <MapPinIcon className="h-4 w-4 mr-1" />
+          <span>
+            {ride.from.description} to <br></br> {ride.to.description}
+          </span>
+        </div>
+        <div className="flex items-center space-x-2 mt-1">
+          <div className="flex items-center" title={`Max ${ride.availableSeats} passengers`}>
+            <UsersIcon className="h-4 w-4 text-gray-400" />
+            <span className="text-xs text-gray-500 ml-1">
+              Max {ride.availableSeats} seats available
+            </span>
+          </div>
+          {ride.smokingAllowed && (
+            <div className="flex items-center" title="Smoking allowed">
+              <CigaretteIcon className="h-4 w-4 text-gray-400" />
+            </div>
+          )}
+          {ride.petsAllowed && (
+            <div className="flex items-center" title="Pets allowed">
+              <PawPrintIcon className="h-4 w-4 text-gray-400" />
+            </div>
+          )}
+        </div>
+      </div>
+      <button onClick={()=>{history(`/ride/${ride._id}`)}} className="ml-4 px-4 py-2 bg-green-50 text-green-600 rounded-md hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+        Book
+        {/* Assuming ride.instantBooking is to be used */}
+        {ride.instantBooking && (
+          <ZapIcon className="inline-block ml-2 h-4 w-4 text-yellow-500" title="Instant booking available" />
+        )}
+      </button>
+    </div>
+  </li>
+))}
+
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
       </main>

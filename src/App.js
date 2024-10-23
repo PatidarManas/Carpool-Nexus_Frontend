@@ -57,8 +57,8 @@ function App() {
         <Route path={"/"} element={<LandingPage />} />
         <Route path={"/signup"} element={isLoading ? <Loading /> : isLogin ? <Dashboard/> : <Signup URL={URL} />} />
         <Route path={"/dashboard"} element={<Dashboard />} />
-        <Route path={"/search"} element={<SearchRide />} />
-        <Route path={"/ride"} element={<RideDetails />} />
+        <Route path={"/search"} element={<SearchRide URL={URL}/>} />
+        <Route path={"/ride/:id"} element={<RideDetails URL={URL}/>} />
         <Route path={"/requestHistory"} element={<RequestHistory />} />
         <Route path={"/payment"} element={<Payment />} />
         <Route path={"/createRide"} element={isLoading ? <Loading /> : isLogin ? <CreateRide URL={URL} USER={user}/> : <Signup URL={URL} />}  />

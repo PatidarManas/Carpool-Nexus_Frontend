@@ -1,10 +1,30 @@
 import { MapPin, Calendar, Clock, Car, Star, User, PawPrint, Cigarette, Users, AlertCircle, DollarSign, Route } from 'lucide-react'
 import Navbar from '../Components/Navbar'
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import axios from 'axios';
+import Loading from '../Components/Loading';
+import Tiles from '../Components/Tiles';
 
-export default function RideDetails() {
-  return (
-    
-        <div>
+export default function RideDetails({URL}) {
+  const [ride,setRide] = useState(null);
+  const {id} = useParams();
+
+  useEffect(() => {
+    async function getDetails(){
+
+      try {
+        const response = await axios.get(`${URL}/rides/search/${id}`)
+        setRide(response.data);
+      } catch (error) {
+        console.log(error);
+      }
+    }
+    getDetails();
+  }, [id])
+  
+  return !ride ? <Loading/> : (
+    <div>
     <Navbar/>
 
     <div className="min-h-screen bg-gradient-to-br from-green-100 to-blue-100 p-2 sm:p-4">
@@ -23,14 +43,22 @@ export default function RideDetails() {
                     <Calendar className="mr-2 text-green-600 flex-shrink-0" />
                     <div>
                       <p className="font-semibold">Date</p>
-                      <p>September 29, 2024</p>
+                      <p>{new Date(ride.when).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })}</p>
                     </div>
                   </div>
                   <div className="flex items-center">
                     <Clock className="mr-2 text-green-600 flex-shrink-0" />
                     <div>
                       <p className="font-semibold">Time</p>
-                      <p>10:30 AM</p>
+                      <p>{new Date(ride.when).toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: true
+  })}</p>
                     </div>
                   </div>
                   <div className="flex items-center">
@@ -44,7 +72,7 @@ export default function RideDetails() {
                     <DollarSign className="mr-2 text-green-600 flex-shrink-0" />
                     <div>
                       <p className="font-semibold">Price</p>
-                      <p>Rs250 per seat</p>
+                      <p>Rs{ride.basePrice} per seat</p>
                     </div>
                   </div>
                 </div>
@@ -56,12 +84,12 @@ export default function RideDetails() {
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="inline-block px-2 py-1 text-xs font-semibold bg-gray-200 text-gray-700 rounded-full">From</span>
-                      <p className="mt-1">Vadodara, Gujrat</p>
+                      <p className="mt-1">{ride.from.description}</p>
                     </div>
                     <Car className="text-green-600 mx-4 flex-shrink-0" />
                     <div>
                       <span className="inline-block px-2 py-1 text-xs font-semibold bg-gray-200 text-gray-700 rounded-full">To</span>
-                      <p className="mt-1">Surat, Gujrat</p>
+                      <p className="mt-1">{ride.to.description}</p>
                     </div>
                   </div>
                 </div>
@@ -74,7 +102,7 @@ export default function RideDetails() {
               </div>
               <div className="bg-gray-200 rounded-lg aspect-square relative overflow-hidden">
                 <div className="absolute inset-0 flex items-center justify-center text-gray-500">
-                  Map placeholder
+                  <Tiles start={[ride.from.location.lng, ride.from.location.lat]} end={[ride.to.location.lng, ride.to.location.lat]} setPath={()=>{}}/>
                 </div>
                 <img src="/placeholder.svg?height=300&width=300" alt="Route map" className="w-full h-full object-cover" />
               </div>
@@ -86,17 +114,17 @@ export default function RideDetails() {
             <h2 className="text-xl font-semibold mb-4">Rider Information</h2>
             <div className="flex items-center space-x-4">
               <div className="w-16 h-16 bg-gray-300 rounded-full overflow-hidden">
-                <img src="/placeholder.svg?height=64&width=64" alt="Rider profile" className="w-full h-full object-cover" />
+                <img src="/placeholder.svg?height=64&width=64" alt={ride.createdBy.name[0]} className="w-full h-full object-cover" />
               </div>
               <div>
-                <h3 className="text-lg font-medium">John Doe</h3>
+                <h3 className="text-lg font-medium">{ride.createdBy.name}</h3>
                 <div className="flex items-center">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} className={`${i < 4 ? 'text-yellow-400' : 'text-gray-300'} fill-current`} />
+                    <Star key={i} className={`${i < ride.createdBy.rating ? 'text-yellow-400' : 'text-gray-300'} fill-current`} />
                   ))}
-                  <span className="ml-2 text-sm text-gray-600">(4.0)</span>
+                  <span className="ml-2 text-sm text-gray-600">{ride.createdBy.rating}</span>
                 </div>
-                <p className="text-sm text-gray-600">Contact: john@example.com</p>
+                <p className="text-sm text-gray-600">Contact: {ride.createdBy.email}</p>
               </div>
             </div>
           </section>
@@ -107,19 +135,19 @@ export default function RideDetails() {
             <div className="grid grid-cols-2 gap-4">
               <div className="flex items-center">
                 <PawPrint className="mr-2 text-green-600 flex-shrink-0" />
-                <span>Pets Allowed: Yes</span>
+                <span>Pets Allowed: {ride.petsAllowed ? 'Yes' : 'No'}</span>
               </div>
               <div className="flex items-center">
                 <Cigarette className="mr-2 text-green-600 flex-shrink-0" />
-                <span>Smoking Allowed: No</span>
+                <span>Smoking Allowed: {ride.smokingAllowed ? 'Yes' : 'No'}</span>
               </div>
               <div className="flex items-center">
                 <Users className="mr-2 text-green-600 flex-shrink-0" />
-                <span>Seats Available: 3</span>
+                <span>Seats Available: {ride.availableSeats}</span>
               </div>
               <div className="flex items-center">
                 <Car className="mr-2 text-green-600 flex-shrink-0" />
-                <span>Car Type: Sedan</span>
+                <span>Car Type: {ride.carType}</span>
               </div>
             </div>
           </section>
@@ -151,6 +179,6 @@ export default function RideDetails() {
         </div>
       </div>
       </div>
-    </div>
-  )
+    </div>)
+  
 }
